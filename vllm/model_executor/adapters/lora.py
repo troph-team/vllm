@@ -31,7 +31,7 @@ class VllmLoRA(LoraLayer, ColumnParallelLinear):
         self.update_layer("q_proj", r, lora_alpha, lora_dropout, init_lora_weights)
         self.update_layer("k_proj", r, lora_alpha, lora_dropout, init_lora_weights)
         self.update_layer("v_proj", r, lora_alpha, lora_dropout, init_lora_weights)
-        self.active_adapter = adapter_name
+        # self.active_adapter = adapter_name
 
     def forward(self, input_):
         result, bias = ColumnParallelLinear.forward(self, input_)
