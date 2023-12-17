@@ -9,13 +9,6 @@
 with LoRA support
 </h3>
 
-<p align="center">
-| <a href="https://vllm.readthedocs.io/en/latest/"><b>Documentation</b></a> | <a href="https://vllm.ai"><b>Blog</b></a> | <a href="https://github.com/vllm-project/vllm/discussions"><b>Discussions</b></a> |
-
-</p>
-
----
-
 ## Compile and install from source
 
 ```shell
