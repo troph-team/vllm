@@ -89,6 +89,8 @@ cd llama/
 ./download.sh
 ```
 
+<img width="784" alt="image" src="https://github.com/SuperBruceJia/vllm/assets/31528604/72463cf8-41ae-455b-8652-9925851cd03b">
+
 ## Convert Models to PyTorch `pt` files
 ```shell
 git clone https://github.com/huggingface/transformers.git
