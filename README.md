@@ -60,7 +60,7 @@ for output in completions:
     print(gens, '\n')
 ```
 
-## Delete LLM and clear cache
+## Delete LLM and free GPU memory
 ```python
 import gc
 
