@@ -81,3 +81,21 @@ torch.cuda.empty_cache()
 torch.distributed.destroy_process_group()
 print("Successfully delete the llm pipeline and free the GPU memory!")
 ```
+
+## Download LLaMA 2 models from Meta
+```shell
+git clone https://github.com/facebookresearch/llama.git
+cd llama/
+./download.sh
+```
+
+## Convert Models to `pt` files
+```shell
+git clone https://github.com/huggingface/transformers.git
+cp -r llama/tokenizer.model llama/llama-2-7b
+cp -r llama/tokenizer_checklist.chk llama/llama-2-7b
+mkdir llama/llama-2-7b-hf
+python transformers/src/transformers/models/llama/convert_llama_weights_to_hf.py --input_dir llama/llama-2-7b --model_size 7B --output_dir llama/llama-2-7b-hf
+```
+![image](https://github.com/SuperBruceJia/vllm/assets/31528604/b8454775-456e-453b-ad9e-e25c4123545c)
+
