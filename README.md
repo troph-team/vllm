@@ -89,7 +89,7 @@ cd llama/
 ./download.sh
 ```
 
-## Convert Models to `pt` files
+## Convert Models to PyTorch `pt` files
 ```shell
 git clone https://github.com/huggingface/transformers.git
 cp -r llama/tokenizer.model llama/llama-2-7b
