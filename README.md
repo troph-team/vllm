@@ -6,7 +6,7 @@
 </p>
 
 <h3 align="center">
-Easy, fast, and cheap LLM serving for everyone
+vLLM with LoRA support
 </h3>
 
 <p align="center">
