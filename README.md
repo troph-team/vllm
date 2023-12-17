@@ -9,6 +9,8 @@
 with LoRA support
 </h3>
 
+---
+
 ## Compile and install from source
 
 ```shell
