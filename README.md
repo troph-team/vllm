@@ -22,8 +22,6 @@ pip install transformers==4.34.0 --upgrade --user
 pip install bitsandbytes==0.41.1 --upgrade --user
 ```
 
----
-
 ## Compile and install from source
 
 ```shell
