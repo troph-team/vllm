@@ -43,7 +43,7 @@ def stop_token_list():
 stop_tokens = stop_token_list()
 sampling_params = SamplingParams(temperature=0.0, top_p=1, max_tokens=128, stop=stop_tokens)
 
-llm = LLM(model="meta-llama/Llama-2-7b-hf", load_format="auto", tensor_parallel_size=1, gpu_memory_utilization=0.90)
+llm = LLM(model="meta-llama/Llama-2-7b-hf", tensor_parallel_size=1, gpu_memory_utilization=0.90)
 lora.LoRAModel.from_pretrained(llm.llm_engine.workers[0].model, '/adapter')  # The adapter saved path
 
 prompts = ["John writes 20 pages a day.  How long will it take him to write 3 books that are 400 pages each?",
