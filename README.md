@@ -6,7 +6,7 @@
 </p>
 
 <h3 align="center">
-vLLM with LoRA support
+with LoRA support
 </h3>
 
 <p align="center">
