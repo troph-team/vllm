@@ -11,6 +11,19 @@ with LoRA support
 
 ---
 
+## Environment
+**CUDA Version**: 12.2\
+**Python Version**: 3.8.10\
+**Transformers Version**: 4.34.0\
+**bitsandbytes Version**: 0.41.1
+
+```shell
+pip install transformers==4.34.0 --upgrade --user
+pip install bitsandbytes==0.41.1 --upgrade --user
+```
+
+---
+
 ## Compile and install from source
 
 ```shell
