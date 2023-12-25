@@ -1,4 +1,5 @@
 """A GPU worker class."""
+import os
 from typing import Dict, List, Tuple
 
 import torch
@@ -303,6 +304,9 @@ def _init_distributed_environment(
         rank=rank,
         init_method=distributed_init_method,
     )
+    
+    os.environ["NCCL_IGNORE_DISABLED_P2P"] = '1'
+    
     # A small all_reduce for warmup.
     torch.distributed.all_reduce(torch.zeros(1).cuda())
     initialize_model_parallel(parallel_config.tensor_parallel_size,
