@@ -306,7 +306,8 @@ def _init_distributed_environment(
     )
     
     os.environ["NCCL_IGNORE_DISABLED_P2P"] = '1'
-    
+    os.environ["NCCL_P2P_DISABLE"] = '1'
+
     # A small all_reduce for warmup.
     torch.distributed.all_reduce(torch.zeros(1).cuda())
     initialize_model_parallel(parallel_config.tensor_parallel_size,
