@@ -1,13 +1,16 @@
+# coding=utf-8
+import os
+from operator import attrgetter
+
+import torch
+from torch import nn
 from peft.tuners.lora import LoraLayer
 from peft import PeftConfig, LoraConfig, PEFT_TYPE_TO_CONFIG_MAPPING
 from peft.utils import WEIGHTS_NAME
 from huggingface_hub import hf_hub_download
-import torch
-from torch import nn
-from vllm.model_executor.models.opt import ColumnParallelLinear
+
 from .mapping import MODEL_LAYER_MAPPING
-from operator import attrgetter
-import os
+from vllm.model_executor.models.opt import ColumnParallelLinear
 
 
 class VllmLoRA(LoraLayer, ColumnParallelLinear):
@@ -19,31 +22,28 @@ class VllmLoRA(LoraLayer, ColumnParallelLinear):
         r: int = 0,
         lora_alpha: int = 1,
         lora_dropout: float = 0.0,
-        adapter_name="default",
         **kwargs,
     ):
         init_lora_weights = kwargs.pop("init_lora_weights", True)
 
         ColumnParallelLinear.__init__(self, input_size, output_size, *args, **kwargs)
         LoraLayer.__init__(self, input_size, input_size)
-
         nn.Linear.reset_parameters(self)
+
         self.update_layer("q_proj", r, lora_alpha, lora_dropout, init_lora_weights)
         self.update_layer("k_proj", r, lora_alpha, lora_dropout, init_lora_weights)
         self.update_layer("v_proj", r, lora_alpha, lora_dropout, init_lora_weights)
-        # self.active_adapter = adapter_name
 
     def forward(self, input_):
         result, bias = ColumnParallelLinear.forward(self, input_)
-
         x = input_.to(self.lora_A["q_proj"].weight.dtype)
 
         lora_results = [
-            self.lora_B[adapter](self.lora_A[adapter](self.lora_dropout[adapter](x)))
-            * self.scaling[adapter]
+            self.lora_B[adapter](self.lora_A[adapter](self.lora_dropout[adapter](x))) * self.scaling[adapter]
             for adapter in ["q_proj", "k_proj", "v_proj"]
         ]
         result += torch.cat(lora_results, dim=-1)
+
         return result, bias
 
 
@@ -111,8 +111,7 @@ class LoRAModel:
                 )
 
         adapters_weights = torch.load(
-            filename,
-            map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+            filename, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         )
 
         peft_model_state_dict = {}
@@ -124,6 +123,7 @@ class LoRAModel:
         for k, _ in model.named_parameters():
             if "lora_" in k:
                 vllm_prefix = k.split("layers")[0]
+
         if not vllm_prefix:
             raise ValueError("Can't find vllm_prefix.")
 
@@ -139,4 +139,5 @@ class LoRAModel:
                     peft_model_state_dict[to_key] = proj_weight
 
         incompatible_keys = model.load_state_dict(peft_model_state_dict, strict=False)
+
         return incompatible_keys
