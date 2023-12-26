@@ -86,6 +86,8 @@ __global__ void single_query_cached_kv_attention_kernel(
   const int kv_block_stride,
   const int kv_head_stride) {
   constexpr int THREAD_GROUP_SIZE = MAX(WARP_SIZE / BLOCK_SIZE, 1);
+  constexpr int NUM_THREAD_GROUPS = NUM_THREADS / THREAD_GROUP_SIZE; // Note: This assumes THREAD_GROUP_SIZE divides NUM_THREADS
+  assert(NUM_THREADS % THREAD_GROUP_SIZE == 0);
   constexpr int NUM_TOKENS_PER_THREAD_GROUP = (BLOCK_SIZE + WARP_SIZE - 1) / WARP_SIZE;
   constexpr int NUM_WARPS = NUM_THREADS / WARP_SIZE;
   const int thread_idx = threadIdx.x;
@@ -120,12 +122,13 @@ __global__ void single_query_cached_kv_attention_kernel(
   // th vectors of the query, and so on.
   // NOTE(woosuk): Because q is split from a qkv tensor, it may not be contiguous.
   const scalar_t* q_ptr = q + seq_idx * q_stride + head_idx * HEAD_SIZE;
-  Q_vec q_vecs[NUM_VECS_PER_THREAD];
+  __shared__ Q_vec q_vecs[THREAD_GROUP_SIZE][NUM_VECS_PER_THREAD];
 #pragma unroll
-  for (int i = 0; i < NUM_VECS_PER_THREAD; i++) {
+  for (int i = thread_group_idx; i < NUM_VECS_PER_THREAD; i += NUM_THREAD_GROUPS) {
     const int vec_idx = thread_group_offset + i * THREAD_GROUP_SIZE;
-    q_vecs[i] = *reinterpret_cast<const Q_vec*>(q_ptr + vec_idx * VEC_SIZE);
+    q_vecs[thread_group_offset][i] = *reinterpret_cast<const Q_vec*>(q_ptr + vec_idx * VEC_SIZE);
   }
+  __syncthreads(); // TODO(naed90): possible speedup if this is replaced with a memory wall right before we use q_vecs
 
   // Memory planning.
   extern __shared__ char shared_mem[];
@@ -173,9 +176,9 @@ __global__ void single_query_cached_kv_attention_kernel(
 
       // Compute dot product.
       // This includes a reduction across the threads in the same thread group.
-      float qk = scale * Qk_dot<scalar_t, THREAD_GROUP_SIZE>::dot(q_vecs, k_vecs);
+      float qk = scale * Qk_dot<scalar_t, THREAD_GROUP_SIZE>::dot(q_vecs[thread_group_offset], k_vecs);
       // Add the ALiBi bias if slopes are given.
-      qk += (alibi_slope != 0) ? alibi_slope * (token_idx - context_len) : 0;
+      qk += (alibi_slope != 0) ? alibi_slope * (token_idx - context_len + 1) : 0;
 
       if (thread_group_offset == 0) {
         // Store the partial reductions to shared memory.
@@ -243,6 +246,8 @@ __global__ void single_query_cached_kv_attention_kernel(
     accs[i] = 0.f;
   }
 
+  scalar_t zero_value;
+  zero(zero_value);
   for (int block_idx = warp_idx; block_idx < num_blocks; block_idx += NUM_WARPS) {
     const int physical_block_number = block_table[block_idx];
     const int physical_block_offset = (lane % NUM_V_VECS_PER_ROW) * V_VEC_SIZE;
@@ -258,6 +263,16 @@ __global__ void single_query_cached_kv_attention_kernel(
       if (row_idx < HEAD_SIZE) {
         const int offset = row_idx * BLOCK_SIZE + physical_block_offset;
         V_vec v_vec = *reinterpret_cast<const V_vec*>(v_ptr + offset);
+        if (block_idx == num_blocks - 1) {
+          // NOTE(woosuk): When v_vec contains the tokens that are out of the context,
+          // we should explicitly zero out the values since they may contain NaNs.
+          // See https://github.com/vllm-project/vllm/issues/641#issuecomment-1682544472
+          scalar_t* v_vec_ptr = reinterpret_cast<scalar_t*>(&v_vec);
+#pragma unroll
+          for (int j = 0; j <= V_VEC_SIZE; j++) {
+            v_vec_ptr[j] = token_idx + j < context_len ? v_vec_ptr[j] : zero_value;
+          }
+        }
         accs[i] += dot(logits_vec, v_vec);
       }
     }
@@ -326,6 +341,9 @@ __global__ void single_query_cached_kv_attention_kernel(
 } // namespace vllm
 
 #define LAUNCH_ATTENTION_KERNEL(T, HEAD_SIZE, BLOCK_SIZE, NUM_THREADS)                        \
+  cudaFuncSetAttribute(                                                                       \
+      vllm::single_query_cached_kv_attention_kernel<T, HEAD_SIZE, BLOCK_SIZE, NUM_THREADS>,   \
+      cudaFuncAttributeMaxDynamicSharedMemorySize, shared_mem_size);                          \
   vllm::single_query_cached_kv_attention_kernel<T, HEAD_SIZE, BLOCK_SIZE, NUM_THREADS>        \
   <<<grid, block, shared_mem_size, stream>>>(                                                 \
     out_ptr,                                                                                  \
@@ -386,6 +404,8 @@ void single_query_cached_kv_attention_launcher(
   int padded_max_context_len = ((max_context_len + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE;
   int logits_size = padded_max_context_len * sizeof(float);
   int outputs_size = (NUM_WARPS / 2) * head_size * sizeof(float);
+  // Python-side check in vllm.worker.worker._check_if_can_support_max_seq_len
+  // Keep that in sync with the logic here!
   int shared_mem_size = std::max(logits_size, outputs_size);
 
   dim3 grid(num_heads, num_seqs);

@@ -6,94 +6,98 @@
 </p>
 
 <h3 align="center">
-Easy, fast, and cheap LLM serving for everyone
+with LoRA support
 </h3>
 
-<p align="center">
-| <a href="https://vllm.readthedocs.io/en/latest/"><b>Documentation</b></a> | <a href="https://vllm.ai"><b>Blog</b></a> | <a href="https://github.com/vllm-project/vllm/discussions"><b>Discussions</b></a> |
-
-</p>
-
 ---
 
-*Latest News* 🔥
-- [2023/06] Serving vLLM On any Cloud with SkyPilot. Check out a 1-click [example](https://github.com/skypilot-org/skypilot/blob/master/llm/vllm) to start the vLLM demo, and the [blog post](https://blog.skypilot.co/serving-llm-24x-faster-on-the-cloud-with-vllm-and-skypilot/) for the story behind vLLM development on the clouds.
-- [2023/06] We officially released vLLM! FastChat-vLLM integration has powered [LMSYS Vicuna and Chatbot Arena](https://chat.lmsys.org) since mid-April. Check out our [blog post](https://vllm.ai).
+## Environment
+**CUDA Version**: 12.2\
+**Python Version**: 3.8.10\
+**Transformers Version**: 4.34.0\
+**bitsandbytes Version**: 0.41.1
 
----
-
-vLLM is a fast and easy-to-use library for LLM inference and serving.
-
-vLLM is fast with:
-
-- State-of-the-art serving throughput
-- Efficient management of attention key and value memory with **PagedAttention**
-- Continuous batching of incoming requests
-- Optimized CUDA kernels
-
-vLLM is flexible and easy to use with:
-
-- Seamless integration with popular HuggingFace models
-- High-throughput serving with various decoding algorithms, including *parallel sampling*, *beam search*, and more
-- Tensor parallelism support for distributed inference
-- Streaming outputs
-- OpenAI-compatible API server
-
-vLLM seamlessly supports many Huggingface models, including the following architectures:
-
-- BLOOM (`bigscience/bloom`, `bigscience/bloomz`, etc.)
-- GPT-2 (`gpt2`, `gpt2-xl`, etc.)
-- GPT BigCode (`bigcode/starcoder`, `bigcode/gpt_bigcode-santacoder`, etc.)
-- GPT-J (`EleutherAI/gpt-j-6b`, `nomic-ai/gpt4all-j`, etc.)
-- GPT-NeoX (`EleutherAI/gpt-neox-20b`, `databricks/dolly-v2-12b`, `stabilityai/stablelm-tuned-alpha-7b`, etc.)
-- LLaMA (`lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
-- MPT (`mosaicml/mpt-7b`, `mosaicml/mpt-30b`, etc.)
-- OPT (`facebook/opt-66b`, `facebook/opt-iml-max-30b`, etc.)
-
-Install vLLM with pip or [from source](https://vllm.readthedocs.io/en/latest/getting_started/installation.html#build-from-source):
-
-```bash
-pip install vllm
+```shell
+pip install transformers==4.34.0 --upgrade --user
+pip install bitsandbytes==0.41.1 --upgrade --user
 ```
 
-## Getting Started
+## Compile and install from source
 
-Visit our [documentation](https://vllm.readthedocs.io/en/latest/) to get started.
-- [Installation](https://vllm.readthedocs.io/en/latest/getting_started/installation.html)
-- [Quickstart](https://vllm.readthedocs.io/en/latest/getting_started/quickstart.html)
-- [Supported Models](https://vllm.readthedocs.io/en/latest/models/supported_models.html)
+```shell
+git clone --branch support_peft https://github.com/SuperBruceJia/vllm.git
+cd vllm
+pip install -e . --user
+```
 
-## Performance
+## Set-up LLM with LoRA 
+Please note that this is just a demo!
+```python
+from vllm import LLM, SamplingParams
+from vllm.model_executor.adapters import lora
 
-vLLM outperforms HuggingFace Transformers (HF) by up to 24x and Text Generation Inference (TGI) by up to 3.5x, in terms of throughput.
-For details, check out our [blog post](https://vllm.ai).
+def stop_token_list():
+    stop_tokens = ["Question:",
+                   "Question",
+                   "USER:",
+                   "USER",
+                   "ASSISTANT:",
+                   "ASSISTANT",
+                   "Instruction:",
+                   "Instruction",
+                   "Response:",
+                   "Response",]
 
-<p align="center">
-  <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a10g_n1_dark.png">
-  <img src="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a10g_n1_light.png" width="45%">
-  </picture>
-  <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a100_n1_dark.png">
-  <img src="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a100_n1_light.png" width="45%">
-  </picture>
-  <br>
-  <em> Serving throughput when each request asks for 1 output completion. </em>
-</p>
+    return stop_tokens
 
-<p align="center">
-  <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a10g_n3_dark.png">
-  <img src="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a10g_n3_light.png" width="45%">
-  </picture>
-  <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a100_n3_dark.png">
-  <img src="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/figures/perf_a100_n3_light.png" width="45%">
-  </picture>  <br>
-  <em> Serving throughput when each request asks for 3 output completions. </em>
-</p>
 
-## Contributing
+stop_tokens = stop_token_list()
+sampling_params = SamplingParams(temperature=0.0, top_p=1, max_tokens=128, stop=stop_tokens)
 
-We welcome and value any contributions and collaborations.
-Please check out [CONTRIBUTING.md](./CONTRIBUTING.md) for how to get involved.
+llm = LLM(model="meta-llama/Llama-2-7b-hf", tensor_parallel_size=1, gpu_memory_utilization=0.90)
+lora.LoRAModel.from_pretrained(llm.llm_engine.workers[0].model, './adapter')  # The adapter saved path
+
+prompts = ["John writes 20 pages a day.  How long will it take him to write 3 books that are 400 pages each?",
+           "Paddington has 40 more goats than Washington. If Washington has 140 goats, how many goats do they have in total?",
+           "Ed has 2 dogs, 3 cats and twice as many fish as cats and dogs combined. How many pets does Ed have in total?"]
+completions = llm.generate(prompts, sampling_params)
+for output in completions:
+    gens = output.outputs[0].text
+    print(gens, '\n')
+```
+
+## Delete LLM and free GPU memory
+```python
+import gc
+
+import torch
+from vllm.model_executor.parallel_utils.parallel_state import destroy_model_parallel
+
+# Delete the llm object and free the memory
+destroy_model_parallel()
+del llm
+gc.collect()
+torch.cuda.empty_cache()
+torch.distributed.destroy_process_group()
+print("Successfully delete the llm pipeline and free the GPU memory!")
+```
+
+## Download LLaMA 2 models from Meta
+```shell
+git clone https://github.com/facebookresearch/llama.git
+cd llama/
+./download.sh
+```
+
+<img width="784" alt="image" src="https://github.com/SuperBruceJia/vllm/assets/31528604/72463cf8-41ae-455b-8652-9925851cd03b">
+
+## Convert Models to PyTorch `pt` files
+```shell
+git clone https://github.com/huggingface/transformers.git
+cp -r llama/tokenizer.model llama/llama-2-7b
+cp -r llama/tokenizer_checklist.chk llama/llama-2-7b
+mkdir llama/llama-2-7b-hf
+python transformers/src/transformers/models/llama/convert_llama_weights_to_hf.py --input_dir llama/llama-2-7b --model_size 7B --output_dir llama/llama-2-7b-hf
+```
+![image](https://github.com/SuperBruceJia/vllm/assets/31528604/b8454775-456e-453b-ad9e-e25c4123545c)
+
